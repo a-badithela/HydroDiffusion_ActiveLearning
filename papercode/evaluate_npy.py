@@ -124,8 +124,20 @@ def evaluate(cfg: dict):
         basin_list_path=os.path.join(RAW_DIR, 'Basin_List.npy'),
     )
 
+    # compute normalization using all basins (consistent with training)
     scalar = compute_normalization(data, dates)
     print(f"Computed normalization scalar: {scalar}")
+
+    # --- spatial split: filter to test basins if basin_split_csv is provided ---
+    if cfg.get('basin_split_csv'):
+        import pandas as pd
+        split_df = pd.read_csv(cfg['basin_split_csv'])
+        test_ids = set(split_df[split_df['Label'] == 'test']['Basin_ID'].astype(str).str.zfill(8))
+        mask = np.array([b in test_ids for b in basins_all])
+        data = data[mask]
+        basins_all = basins_all[mask]
+        print(f'[Spatial split] Evaluating on {mask.sum()} test basins out of {len(mask)} total')
+
     q_means, q_stds = compute_per_basin_q_stats(data, dates)
 
     # --- build model ---

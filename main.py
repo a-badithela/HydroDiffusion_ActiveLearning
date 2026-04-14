@@ -112,6 +112,7 @@ def get_args() -> Dict:
     # Dataloader
     parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
     parser.add_argument('--stride', default=1, type=int, help='Stride for test dataset')
+    parser.add_argument('--basin_split_csv', default=None, type=str, help='Path to basin split CSV for spatial split')
     
     # Model
     parser.add_argument('--n_layers', default=6, type=int, help='Number of layers')
