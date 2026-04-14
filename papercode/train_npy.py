@@ -122,8 +122,18 @@ def _prepare_data(cfg: Dict) -> Dict:
     )
 
     print()
-    print('=== Step 2: Compute normalization from training period ===')
+    print('=== Step 2: Compute normalization from training period (all basins) ===')
     scalar = compute_normalization(data, dates)
+
+    # --- spatial split: filter to train basins if basin_split_csv is provided ---
+    if cfg.get('basin_split_csv'):
+        import pandas as pd
+        split_df = pd.read_csv(cfg['basin_split_csv'])
+        train_ids = set(split_df[split_df['Label'] == 'train']['Basin_ID'].astype(str).str.zfill(8))
+        mask = np.array([b in train_ids for b in basins])
+        data = data[mask]
+        basins = basins[mask]
+        print(f'[Spatial split] Using {mask.sum()} train basins out of {len(mask)} total')
     for k, v in scalar.items():
         print(f'  {k}: {v}')
 
