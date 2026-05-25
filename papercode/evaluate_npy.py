@@ -130,7 +130,6 @@ def evaluate(cfg: dict):
 
     # --- spatial split: filter to test basins if basin_split_csv is provided ---
     if cfg.get('basin_split_csv'):
-        import pandas as pd
         split_df = pd.read_csv(cfg['basin_split_csv'])
         test_ids = set(split_df[split_df['Label'] == 'test']['gauge_id'].astype(str).str.zfill(8))
         mask = np.array([b in test_ids for b in basins_all])

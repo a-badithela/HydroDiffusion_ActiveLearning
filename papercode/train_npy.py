@@ -127,9 +127,8 @@ def _prepare_data(cfg: Dict) -> Dict:
 
     # --- spatial split: filter to train basins if basin_split_csv is provided ---
     if cfg.get('basin_split_csv'):
-        import pandas as pd
         split_df = pd.read_csv(cfg['basin_split_csv'])
-        train_ids = set(split_df[split_df['Label'] == 'train']['gauge_id'].astype(str).str.zfill(8))
+        train_ids = set(split_df[split_df['split'] == 'seed']['gauge_id'].astype(str).str.zfill(8))
         mask = np.array([b in train_ids for b in basins])
         data = data[mask]
         basins = basins[mask]

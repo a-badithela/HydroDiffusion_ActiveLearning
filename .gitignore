@@ -1,5 +1,6 @@
 ensemble_stats/
 reports/
+logs/
 runs/
 *.pyc
 
