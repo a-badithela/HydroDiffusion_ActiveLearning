@@ -3,3 +3,14 @@ bash train.sh seq2seq_ssm static 1 init_run
 bash test.sh seq2seq_ssm static 1 runs/run_2302_1130_seed3407 init_run
 
 bash test.sh diffusion_ssm static 1 runs/hd_best init_run
+
+bash schedule_al.sh \
+    --split_csv /projects/.../camels_split_geo_100_100.csv \
+    --acq_fn ensemble \
+    --n_rounds 5 \
+    --k 10 \
+    --n_seeds 5 \
+
+optional --train_stride 90 
+
+bash schedule.sh encdec_lstm 5 90   # 3rd arg = stride

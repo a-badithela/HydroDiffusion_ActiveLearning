@@ -131,11 +131,11 @@ def evaluate(cfg: dict):
     # --- spatial split: filter to test basins if basin_split_csv is provided ---
     if cfg.get('basin_split_csv'):
         split_df = pd.read_csv(cfg['basin_split_csv'])
-        test_ids = set(split_df[split_df['Label'] == 'test']['gauge_id'].astype(str).str.zfill(8))
+        test_ids = set(split_df[split_df['split'].isin(['seed', 'eval'])]['gauge_id'].astype(str).str.zfill(8))
         mask = np.array([b in test_ids for b in basins_all])
         data = data[mask]
         basins_all = basins_all[mask]
-        print(f'[Spatial split] Evaluating on {mask.sum()} test basins out of {len(mask)} total')
+        print(f'[Spatial split] Evaluating on {mask.sum()} basins (seed+eval) out of {len(mask)} total')
 
     q_means, q_stds = compute_per_basin_q_stats(data, dates)
 
@@ -412,13 +412,13 @@ def evaluate(cfg: dict):
                     stat_f = static_attrs.unsqueeze(1).repeat(1, future_prec.size(1), 1)
                         
                     ens = []
-                    for _ in range(cfg.get("num_samples",10)):
+                    for _ in range(int(cfg.get("num_samples", 10))):
                         samp = model.sample_ddim(
                             x_past      = x_past,
-                            static_attributes = stat_f, 
+                            static_attributes = stat_f,
                             future_pcp  = future_prec,
-                            num_steps   = cfg.get("ddim_steps"),
-                            eta         = 0.0
+                            num_steps   = int(cfg.get("ddim_steps", 10)),
+                            eta         = float(cfg.get("eta", 1.0)),
                         )  # returns (B, H)
                         ens.append(samp)
                     ens  = torch.stack(ens, dim=0)    # (S,B,H)
@@ -465,6 +465,7 @@ def evaluate(cfg: dict):
             basins=bas,       # (N,)
             dates=dts,        # (N,) datetime64[ns]
             obs=tgts_arr,     # (N,H)
+            preds=preds_arr,  # (N,H) ensemble mean
             ens=ens_arr)      # (N,S,H)
         print(f"[INFO] Saved ensemble predictions (N,S,H) to {npz_path}")
     else:

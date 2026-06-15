@@ -402,3 +402,34 @@ def baseflow_index(df: pd.DataFrame, alpha: float = 0.925, n_passes: int = 3):
 
     obs, sim = _clean(df)
     return _bfi(obs), _bfi(sim)
+
+
+# ─────────────────────────────────────────────────────────────
+# 15. CRPS — Continuous Ranked Probability Score
+# ─────────────────────────────────────────────────────────────
+
+def crps_ensemble(obs: np.ndarray, ens: np.ndarray) -> float:
+    """Mean CRPS for an ensemble forecast (energy-score formulation).
+
+    Parameters
+    ----------
+    obs : (N,)   observed values
+    ens : (N, S) ensemble members (S trajectories per observation)
+
+    Returns
+    -------
+    float
+        Mean CRPS over the N observations (lower = better; 0 = perfect).
+
+    Notes
+    -----
+    CRPS = E[|X - y|] - 0.5 · E[|X - X'|]
+    Evaluated via the sorted-ensemble identity in O(N · S · log S):
+        spread term = (1/S²) · Σ_k s_k · (2k + 1 - S)  [0-indexed k, sorted s]
+    """
+    N, S = ens.shape
+    mae = np.mean(np.abs(ens - obs[:, None]))
+    ens_s = np.sort(ens, axis=1)
+    weights = (2 * np.arange(S) + 1 - S) / S ** 2
+    spread = np.mean(np.sum(ens_s * weights[None, :], axis=1))
+    return float(mae - spread)

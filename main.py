@@ -113,6 +113,8 @@ def get_args() -> Dict:
     parser.add_argument('--batch_size', default=64, type=int, help='Batch size')
     parser.add_argument('--stride', default=1, type=int, help='Stride for test dataset')
     parser.add_argument('--basin_split_csv', default=None, type=str, help='Path to basin split CSV for spatial split')
+    parser.add_argument('--al_round', default=None, type=int, help='AL round index (metadata only, stored in cfg.json)')
+    parser.add_argument('--al_acq_fn', default=None, type=str, help='AL acquisition function name (metadata only, stored in cfg.json)')
     
     # Model
     parser.add_argument('--n_layers', default=6, type=int, help='Number of layers')
@@ -140,7 +142,9 @@ def get_args() -> Dict:
     DEVICE = torch.device(device if torch.cuda.is_available() else "cpu")
     cfg["DEVICE"] = DEVICE
 
-    cfg.update(GLOBAL_SETTINGS)
+    # GLOBAL_SETTINGS provides defaults; CLI args take precedence.
+    # Previously this was cfg.update(GLOBAL_SETTINGS) which overwrote CLI args.
+    cfg = {**GLOBAL_SETTINGS, **cfg}
 
     if cfg["camels_root"] is not None:
         cfg["camels_root"] = Path(cfg["camels_root"])

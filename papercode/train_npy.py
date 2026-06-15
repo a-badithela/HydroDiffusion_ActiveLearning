@@ -88,15 +88,37 @@ def init_weights(m):
                 nn.init.zeros_(param)
 
 
+def _extract_split_tag(csv_path) -> str:
+    import re
+    if not csv_path:
+        return "all"
+    stem = Path(csv_path).stem
+    m = re.search(r'camels_split_(geo|hyd)(?:_(\d+))?', stem)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}" if m.group(2) else m.group(1)
+    return stem
+
+
+def _make_run_name(cfg: Dict) -> str:
+    date_str = datetime.now().strftime("%Y%m%d")
+    al_round = cfg.get("al_round")
+    al_acq_fn = cfg.get("al_acq_fn", "")
+    type_tag = f"al-r{al_round}-{al_acq_fn}" if al_round is not None else "baseline"
+    model_tag = cfg["model_name"].replace("_", "-")
+    split_tag = _extract_split_tag(cfg.get("basin_split_csv"))
+    stride = cfg.get("stride", 1)
+    # Date as top-level directory; full descriptive name underneath so ls runs/YYYYMMDD/
+    # shows all experiments for that day regardless of model or acquisition method.
+    run_name = f"{type_tag}_{model_tag}_{split_tag}_s{stride}_seed{cfg['seed']}"
+    return f"{date_str}/{run_name}"
+
+
 def _setup_run(cfg: Dict) -> Dict:
     if cfg.get("run_dir") is not None:
-        # Resume mode: reuse existing directory
         base = Path(cfg["run_dir"])
         print(f"Resuming run at: {base}")
     else:
-        # Fresh run: create new timestamped directory
-        now = datetime.now().strftime("%d%m_%H%M")
-        run_name = f"run_{now}_{cfg['model_name']}_nosf_seed{cfg['seed']}"
+        run_name = _make_run_name(cfg)
         base = Path(__file__).resolve().parent.parent / "runs" / run_name
 
     (base / "data" / "train").mkdir(parents=True, exist_ok=True)
@@ -178,12 +200,13 @@ def train(cfg):
     train_end   = cfg['train_end']
     val_start   = cfg['val_start']
     val_end     = cfg['val_end']
+    stride = cfg.get('stride', 1)
     train_ds = CamelsNPY(
         data=data, dates=dates, basins=basins,
         scalar=scalar, q_means=q_means, q_stds=q_stds,
         split_start=train_start, split_end=train_end,
         seq_length=365, forecast_horizon=8,
-        stride=1,
+        stride=stride,
         concat_static=True, no_static=False,
         include_dates=False, is_train=True,
     )
@@ -195,7 +218,7 @@ def train(cfg):
         data=data, dates=dates, basins=basins,
         scalar=scalar, q_means=q_means, q_stds=q_stds,
         split_start=val_start, split_end=val_end,
-        stride=1,
+        stride=stride,
         seq_length=365, forecast_horizon=8,
         concat_static=True, no_static=False,
         include_dates=False, is_train=True,
