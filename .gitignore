@@ -3,6 +3,7 @@ reports/
 logs/
 runs/
 *.pyc
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

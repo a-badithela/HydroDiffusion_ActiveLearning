@@ -401,10 +401,7 @@ def evaluate(cfg: dict):
                 if is_diffusion:
                     x_past = x_d[:, :-fh, :]
                     
-                    if cfg['model_name'] in ['decoder_only_ssm','decoder_only_lstm']:
-                        future_prec = x_d[:, -fh+1:, :]
-                    else:
-                        future_prec = x_d[:, -fh:, :]
+                    future_prec = x_d[:, -fh:, :]
                         
                     if (not cfg['no_static']) and cfg['concat_static'] and cfg['model_name'] not in ['decoder_only_ssm', 'decoder_only_lstm']:
                         stat_p = static_attrs.unsqueeze(1).repeat(1, x_past.size(1), 1)  # [batch, seq_len, 27]
@@ -428,10 +425,7 @@ def evaluate(cfg: dict):
     
                 else:
                     x_past = x_d[:, :-fh, :]
-                    if cfg['model_name'] == 'encdec_lstm':
-                        future_prec = x_d[:, -fh:, :]
-                    elif cfg['model_name'] in ['seq2seq_ssm','seq2seq_lstm']:
-                        future_prec = x_d[:, -fh+1:, :]
+                    future_prec = x_d[:, -fh:, :]
                     if (not cfg['no_static']) and cfg['concat_static']:
                         stat_p = static_attrs.unsqueeze(1).repeat(1, x_past.size(1),     1)
                         stat_f = static_attrs.unsqueeze(1).repeat(1, future_prec.size(1), 1)
