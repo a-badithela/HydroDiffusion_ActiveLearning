@@ -917,7 +917,7 @@ def _build_model(cfg: Dict):
             cfg        = cfg,
             static_dim = cfg.get('static_dim', 27),
             dropout    = cfg['ssm_dropout'],
-            pool_type  = cfg['pool_type '],
+            pool_type  = cfg['pool_type'],
             horizon = cfg['forecast_horizon']
         )
         decoder = unet_attention_film_v2(
@@ -947,7 +947,7 @@ def _build_model(cfg: Dict):
             cfg        = cfg,
             static_dim = cfg.get('static_dim', 27),
             dropout    = cfg['ssm_dropout'],
-            pool_type  = cfg['pool_type '],
+            pool_type  = cfg['pool_type'],
             horizon = cfg['forecast_horizon']
         )
         decoder = GenericLSTM(

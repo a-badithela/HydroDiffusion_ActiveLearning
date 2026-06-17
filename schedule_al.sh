@@ -45,15 +45,15 @@
 # ---------- defaults ----------
 PROJ_DIR=/projects/standard/kumarv/badit004/HydroDiffusion_ActiveLearning
 SPLIT_CSV_INIT=/projects/standard/kumarv/public/eacvi-fhnn-data/camels_active_learning_splits/camels_split_geo.csv
-ACQ_FN=random
+ACQ_FN=epig
 N_ROUNDS=5
 K=10
 N_SEEDS=5
 EPOCHS=30
-RUN_ROOT="$PROJ_DIR/runs/al_orchestration"
+RUN_ROOT="$PROJ_DIR/runs/al_orchestration_epig"
 RUNS_DIR="$PROJ_DIR/runs"
 DEVICE=cuda:0
-STRIDE=1
+STRIDE=90
 ALPHA=1.0
 MODEL=decoder_only_ssm
 TRAIN_STRIDE=1
@@ -91,7 +91,7 @@ fi
 
 # SLURM wall-time for training jobs; SSM with 60 epochs needs ~2-3× more time.
 if [ "$MODEL" = "decoder_only_ssm" ]; then
-    TRAIN_TIME=${TRAIN_TIME:-03:00:00}
+    TRAIN_TIME=${TRAIN_TIME:-02:30:00}
 else
     TRAIN_TIME=${TRAIN_TIME:-01:30:00}
 fi

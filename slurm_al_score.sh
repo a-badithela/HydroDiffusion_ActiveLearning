@@ -16,9 +16,9 @@
 #   STRIDE       — inference stride in days                       (default: 90)
 #   ALPHA        — seed-sim penalty (representativeness)          (default: 1.0)
 
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=10gb
+#SBATCH --mem=5gb
 #SBATCH --mail-type=FAIL
 #SBATCH --mail-user='badit004@umn.edu'
 #SBATCH -p a100-4

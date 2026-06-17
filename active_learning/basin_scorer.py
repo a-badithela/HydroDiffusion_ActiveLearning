@@ -94,7 +94,7 @@ class BasinScorer:
                            "ddim_steps", "num_samples", "time_emb_dim",
                            "batch_size", "lstm_nlayers",
                            "d_model", "d_state", "n_layers", "static_dim",
-                           "warmup", "n_splits"}
+                           "warmup"}
             _float_keys = {"dropout", "ssm_dropout",
                            "lr", "lr_min", "lr_dt", "learning_rate",
                            "min_dt", "max_dt", "cfr", "cfi",

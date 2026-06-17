@@ -39,6 +39,7 @@ from active_learning.split_manager import ActiveLearningSplit
 from active_learning.acquisition.random import RandomAcquisition
 from active_learning.acquisition.ensemble import EnsembleDisagreement
 from active_learning.acquisition.representativeness import RepresentativenessAcquisition
+from active_learning.acquisition.epig import EPIGAcquisition
 from active_learning.basin_scorer import BasinScorer
 
 
@@ -72,7 +73,7 @@ def main() -> None:
     parser.add_argument("--ckpt_pattern", default=None, help="Shell glob to match seed run dirs (takes precedence over --ckpt_dir)")
     parser.add_argument("--out_csv",     required=True, help="Output path for updated split CSV")
     parser.add_argument("--acquisition", default="random",
-                        choices=["random", "ensemble", "representativeness"])
+                        choices=["random", "ensemble", "representativeness", "epig"])
     parser.add_argument("--k",           type=int, default=10, help="Basins to promote per round")
     parser.add_argument("--device",      default="cpu",  help="PyTorch device for inference (e.g. cuda:0)")
     parser.add_argument("--stride",      type=int, default=90, help="Inference stride in days")
@@ -127,6 +128,9 @@ def main() -> None:
 
         if args.acquisition == "ensemble":
             acq = EnsembleDisagreement(scorer=scorer, stride=args.stride)
+
+        elif args.acquisition == "epig":
+            acq = EPIGAcquisition(scorer=scorer, stride=args.stride)
 
         else:  # representativeness
             acq = RepresentativenessAcquisition(
