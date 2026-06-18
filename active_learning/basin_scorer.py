@@ -234,9 +234,8 @@ class BasinScorer:
                 x_past = x[:, :-fh, :]     # (B, L, 5)
 
                 if is_diffusion:
-                    # decoder_only models use H-1 future days (no nowcast day in decoder input).
-                    # All other diffusion models use H days. Matches evaluate_npy.py:404-407.
-                    x_future = x[:, -(fh - 1):, :] if is_decoder_only else x[:, -fh:, :]
+                    # All diffusion models use H future days. Matches evaluate_npy.py:404-407.
+                    x_future = x[:, -fh:, :]
 
                     # Concat static into x_past only for non-decoder_only variants.
                     # Matches evaluate_npy.py:409-411.
