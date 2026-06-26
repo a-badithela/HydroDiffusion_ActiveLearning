@@ -15,6 +15,7 @@
 #   DEVICE       — pytorch device                                 (default: cpu)
 #   STRIDE       — inference stride in days                       (default: 90)
 #   ALPHA        — seed-sim penalty (representativeness)          (default: 1.0)
+#   SEED         — RNG seed for random acquisition                (default: AL_ROUND)
 
 #SBATCH --time=01:00:00
 #SBATCH --ntasks=1
@@ -35,6 +36,7 @@ K=${K:-10}
 DEVICE=${DEVICE:-cuda:0}
 STRIDE=${STRIDE:-180}
 ALPHA=${ALPHA:-1.0}
+SEED=${SEED:-$AL_ROUND}
 
 if [ -z "$SPLIT_CSV" ]; then
     echo "ERROR: SPLIT_CSV is not set." >&2; exit 1
@@ -68,6 +70,7 @@ python -m active_learning.run_acquisition \
     --device="$DEVICE" \
     --stride="$STRIDE" \
     --alpha="$ALPHA" \
+    --seed="$SEED" \
     $CKPT_ARG
 
 EXIT_CODE=$?

@@ -56,7 +56,7 @@ DEVICE=cuda:0
 STRIDE=90
 ALPHA=1.0
 MODEL=decoder_only_ssm
-TRAIN_STRIDE=1
+TRAIN_STRIDE=45
 FIRST_SEED=3407
 
 # Capture date ONCE so all seeds in this experiment share the same date tag.

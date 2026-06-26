@@ -6,8 +6,9 @@ score[b] = sim(b, eval_set) - alpha * sim(b, seed_set)
 
 where sim(b, S) = mean cosine similarity between b's embedding and all basins in S.
 
-Embedding: ensemble-mean predictions are summarised as [mean, std] over all
-windows and forecast steps → a 2-D vector per basin.
+Embedding: ensemble-mean predictions are summarised as [global mean, global
+std] plus a per-lead-day mean/std profile over the forecast horizon →
+a (2 + 2*fh)-D vector per basin.
 
 An optional diversity pass (greedy farthest-point) can be applied on top to
 avoid selecting near-duplicates from the pool when k_per_round is large.
@@ -36,11 +37,20 @@ def _mean_sim_to_set(emb: np.ndarray, set_embs: np.ndarray) -> float:
 
 def _embed(preds: np.ndarray) -> np.ndarray:
     """
-    Compress (n_models, n_windows, fh) predictions to a 2-D vector.
-    Takes ensemble mean first, then [global_mean, global_std].
+    Compress (n_models, n_windows, fh) predictions to a fixed-length vector
+    that preserves lead-time structure instead of collapsing to two globals.
+
+    [global_mean, global_std] ++ per-horizon-step mean (fh,) ++
+    per-horizon-step std-across-windows (fh,). Lead-time position 0..fh-1
+    is aligned across basins regardless of which calendar windows survived
+    NaN filtering, so this stays comparable even when window counts differ.
     """
-    flat = preds.mean(axis=0).ravel()   # ensemble mean → flatten time×horizon
-    return np.array([flat.mean(), flat.std()], dtype=np.float32)
+    ens_mean = preds.mean(axis=0)              # (n_windows, fh) — mean over models
+    horizon_mean = ens_mean.mean(axis=0)        # (fh,) — mean over windows, per lead day
+    horizon_std  = ens_mean.std(axis=0)         # (fh,) — variability over windows, per lead day
+    flat = ens_mean.ravel()
+    global_stats = np.array([flat.mean(), flat.std()], dtype=np.float32)
+    return np.concatenate([global_stats, horizon_mean, horizon_std]).astype(np.float32)
 
 
 class RepresentativenessAcquisition(AcquisitionFunction):
@@ -108,18 +118,21 @@ class RepresentativenessAcquisition(AcquisitionFunction):
         seed_basin_ids = seed_basin_ids or []
         eval_basin_ids = eval_basin_ids or []
 
-        # Score pool + eval; seed is not scored (it's already labeled).
-        all_to_score = list(set(pool_basin_ids) | set(eval_basin_ids))
+        # Need embeddings for pool + eval + seed: seed basins aren't scored
+        # themselves (they're already labeled), but their embeddings are
+        # required for the seed-similarity penalty term below.
+        all_to_score = list(set(pool_basin_ids) | set(eval_basin_ids) | set(seed_basin_ids))
         self._run_inference(all_to_score)
         embeddings = self._last_embeddings
+        embed_dim = next(iter(embeddings.values())).shape[0] if embeddings else 2
 
         eval_embs = np.stack(
             [embeddings[b] for b in eval_basin_ids if b in embeddings], axis=0
-        ) if eval_basin_ids else np.zeros((0, 2), dtype=np.float32)
+        ) if eval_basin_ids else np.zeros((0, embed_dim), dtype=np.float32)
 
         seed_embs = np.stack(
             [embeddings[b] for b in seed_basin_ids if b in embeddings], axis=0
-        ) if seed_basin_ids else np.zeros((0, 2), dtype=np.float32)
+        ) if seed_basin_ids else np.zeros((0, embed_dim), dtype=np.float32)
 
         scores: Dict[str, float] = {}
         for bid in pool_basin_ids:
@@ -157,15 +170,16 @@ class RepresentativenessAcquisition(AcquisitionFunction):
         # the basin in the remaining ranked list that is farthest from the
         # already-selected set.
         embeddings = self._last_embeddings or {}
+        embed_dim = next(iter(embeddings.values())).shape[0] if embeddings else 2
 
         selected: List[str] = [ranked[0]]
-        selected_embs: List[np.ndarray] = [embeddings.get(ranked[0], np.zeros(2))]
+        selected_embs: List[np.ndarray] = [embeddings.get(ranked[0], np.zeros(embed_dim))]
         remaining = ranked[1:]
 
         while len(selected) < k and remaining:
             farthest, max_dist = remaining[0], -1.0
             for bid in remaining:
-                emb = embeddings.get(bid, np.zeros(2))
+                emb = embeddings.get(bid, np.zeros(embed_dim))
                 min_dist = min(np.linalg.norm(emb - s) for s in selected_embs)
                 if min_dist > max_dist:
                     max_dist = min_dist

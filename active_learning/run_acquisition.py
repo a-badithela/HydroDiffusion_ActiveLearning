@@ -81,6 +81,8 @@ def main() -> None:
                         help="Seed-similarity penalty weight (representativeness only)")
     parser.add_argument("--diversity_pass", action="store_true",
                         help="Greedy farthest-point diversity pass (representativeness only)")
+    parser.add_argument("--seed",        type=int, default=None,
+                        help="RNG seed for random acquisition (reproducibility)")
     args = parser.parse_args()
 
     # ------------------------------------------------------------------
@@ -100,7 +102,7 @@ def main() -> None:
     # Build acquisition function
     # ------------------------------------------------------------------
     if args.acquisition == "random":
-        acq = RandomAcquisition()
+        acq = RandomAcquisition(seed=args.seed)
 
     else:
         # Both ensemble and representativeness need checkpoints.
