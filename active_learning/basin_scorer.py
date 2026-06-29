@@ -31,11 +31,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from papercode.datasets_npy import (
     CamelsNPY,
-    compute_normalization,
-    compute_per_basin_q_stats,
     load_npy_data,
 )
-from papercode.train_npy import _build_model
+from papercode.train_npy import _build_model, load_norms
 
 RAW_DIR = "/projects/standard/kumarv/renga/Public/DATA/camels_us_531/RAW"
 
@@ -116,8 +114,6 @@ class BasinScorer:
         self.cfg["DEVICE"] = device
 
         # Load raw data once — reused for every scoring call.
-        # Normalization is computed over all 531 basins (same as training)
-        # so stats are consistent across AL rounds.
         data, dates, basins = load_npy_data(
             npy_path=f"{RAW_DIR}/data.npy",
             dates_path=f"{RAW_DIR}/dates.npy",
@@ -126,7 +122,9 @@ class BasinScorer:
         self._data = data
         self._dates = dates
         self._all_basins = np.array([str(b).zfill(8) for b in basins])
-        self._scalar = compute_normalization(data, dates)
+        # Loaded, not recomputed: must match the exact seed-only stats this
+        # checkpoint trained with (train_npy.py::save_norms).
+        self._scalar = load_norms(self.ckpt_paths[0].parent)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -137,7 +135,11 @@ class BasinScorer:
         mask = np.array([b in target for b in self._all_basins])
         data = self._data[mask]
         basins = self._all_basins[mask]
-        q_means, q_stds = compute_per_basin_q_stats(data, self._dates)
+        # Pooled seed-derived scale, not each basin's own true Q stats — basin_ids
+        # here may be candidate basins with no sensor data.
+        n = basins.shape[0]
+        q_means = np.full((n, 1), float(self._scalar["output_mean"][0]), dtype=np.float32)
+        q_stds = np.full((n, 1), float(self._scalar["output_stds"][0]), dtype=np.float32)
         return data, basins, q_means, q_stds
 
     def _load_model_with_ema(self, ckpt_path: Path) -> torch.nn.Module:

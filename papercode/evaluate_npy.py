@@ -11,8 +11,9 @@ from multiprocessing import get_context
 from tqdm import tqdm
 
 from papercode.datasets_npy import (
-    load_npy_data, compute_normalization, compute_per_basin_q_stats, CamelsNPY
+    load_npy_data, compute_per_basin_q_stats, CamelsNPY
 )
+from papercode.train_npy import load_norms
 
 from papercode.lstm import Seq2SeqLSTM, EncoderDecoderDetLSTM
 from papercode.backbones.lstm import GenericLSTM
@@ -124,9 +125,9 @@ def evaluate(cfg: dict):
         basin_list_path=os.path.join(RAW_DIR, 'Basin_List.npy'),
     )
 
-    # compute normalization using all basins (consistent with training)
-    scalar = compute_normalization(data, dates)
-    print(f"Computed normalization scalar: {scalar}")
+    # loaded, not recomputed: must match the seed-only stats this checkpoint trained with
+    scalar = load_norms(run_dir)
+    print(f"Loaded normalization scalar: {scalar}")
 
     # --- spatial split: filter to test basins if basin_split_csv is provided ---
     if cfg.get('basin_split_csv'):

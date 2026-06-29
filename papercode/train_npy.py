@@ -50,6 +50,22 @@ from papercode.datasets_npy import (
 
 RAW_DIR = '/projects/standard/kumarv/renga/Public/DATA/camels_us_531/RAW'
 
+
+def save_norms(run_dir, scalar: Dict[str, np.ndarray]) -> None:
+    """Persist normalization stats to <run_dir>/norms.json so scoring/eval can
+    load the exact values this run trained with instead of recomputing them
+    (recomputing risks a different basin population than this checkpoint saw)."""
+    serializable = {k: np.asarray(v).tolist() for k, v in scalar.items()}
+    with open(Path(run_dir) / "norms.json", "w") as f:
+        json.dump(serializable, f, indent=2)
+
+
+def load_norms(run_dir) -> Dict[str, np.ndarray]:
+    with open(Path(run_dir) / "norms.json") as f:
+        raw = json.load(f)
+    return {k: np.asarray(v, dtype=np.float32) for k, v in raw.items()}
+
+
 def _make_loader(dataset, batch_size, shuffle, num_workers):
     nw = int(num_workers)
     kw = dict(
@@ -121,14 +137,14 @@ def _setup_run(cfg: Dict) -> Dict:
         run_name = _make_run_name(cfg)
         base = Path(__file__).resolve().parent.parent / "runs" / run_name
 
-    (base / "data" / "train").mkdir(parents=True, exist_ok=True)
-    (base / "data" / "val").mkdir(parents=True, exist_ok=True)
-    (base / "data" / "test").mkdir(parents=True, exist_ok=True)
-
+    base.mkdir(parents=True, exist_ok=True)
     cfg["run_dir"] = base
-    cfg["train_dir"] = base / "data" / "train"
-    cfg["val_dir"] = base / "data" / "val"
-    cfg["test_dir"] = base / "data" / "test"
+
+    # Snapshot the split this run actually used, immune to the shared
+    # round{r}/split.csv later being overwritten by a re-run of run_acquisition.py.
+    if cfg.get("basin_split_csv"):
+        import shutil
+        shutil.copy(cfg["basin_split_csv"], base / "split_used.csv")
 
     with open(base / "cfg.json", "w") as f:
         json.dump({k: str(v) for k,v in cfg.items()}, f, indent=4)
@@ -144,10 +160,9 @@ def _prepare_data(cfg: Dict) -> Dict:
     )
 
     print()
-    print('=== Step 2: Compute normalization from training period (all basins) ===')
-    scalar = compute_normalization(data, dates)
-
-    # --- spatial split: filter to train basins if basin_split_csv is provided ---
+    print('=== Step 2: Spatial split — filter to seed basins before computing any stats ===')
+    # Filtering BEFORE normalization (not after) so input/static/target stats are
+    # never pooled over sample/eval basins the model hasn't been "given" yet.
     if cfg.get('basin_split_csv'):
         split_df = pd.read_csv(cfg['basin_split_csv'])
         train_ids = set(split_df[split_df['split'] == 'seed']['gauge_id'].astype(str).str.zfill(8))
@@ -155,15 +170,22 @@ def _prepare_data(cfg: Dict) -> Dict:
         data = data[mask]
         basins = basins[mask]
         print(f'[Spatial split] Using {mask.sum()} train basins out of {len(mask)} total')
+
+    print()
+    print('=== Step 3: Compute normalization from training period (seed basins only) ===')
+    scalar = compute_normalization(data, dates)
     for k, v in scalar.items():
         print(f'  {k}: {v}')
 
     print()
-    print('=== Step 3: Compute per-basin Q stats ===')
+    print('=== Step 4: Compute per-basin Q stats (seed basins only) ===')
     q_means, q_stds = compute_per_basin_q_stats(data, dates)
     print(f'q_means: {q_means.shape}, q_stds: {q_stds.shape}')
     print(f'q_means range: [{q_means.min():.4f}, {q_means.max():.4f}]')
     print(f'q_stds  range: [{q_stds.min():.4f}, {q_stds.max():.4f}]')
+
+    if cfg.get('run_dir'):
+        save_norms(cfg['run_dir'], scalar)
 
     cfg['data'] = data
     cfg['dates'] = dates

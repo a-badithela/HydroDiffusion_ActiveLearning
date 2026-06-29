@@ -12,8 +12,8 @@
 #   OUT_CSV      — next round's split CSV output path             (required)
 #   ACQ_FN       — random | ensemble | representativeness         (default: random)
 #   K            — basins to promote per round                    (default: 10)
-#   DEVICE       — pytorch device                                 (default: cpu)
-#   STRIDE       — inference stride in days                       (default: 90)
+#   DEVICE       — pytorch device                                 (default: cuda:0)
+#   STRIDE       — inference stride in days                       (default: 180)
 #   ALPHA        — seed-sim penalty (representativeness)          (default: 1.0)
 #   SEED         — RNG seed for random acquisition                (default: AL_ROUND)
 

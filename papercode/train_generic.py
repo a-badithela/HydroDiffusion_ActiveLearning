@@ -853,14 +853,8 @@ def _setup_run(cfg: Dict) -> Dict:
     run_name = f"run_{now}_seed{cfg['seed']}"
     base = Path(__file__).resolve().parent.parent / "runs" / run_name
 
-    (base / "data" / "train").mkdir(parents=True, exist_ok=False)
-    (base / "data" / "val").mkdir(parents=True, exist_ok=False)
-    (base / "data" / "test").mkdir(parents=True, exist_ok=False)
-
+    base.mkdir(parents=True, exist_ok=False)
     cfg["run_dir"] = base
-    cfg["train_dir"] = base / "data" / "train"
-    cfg["val_dir"] = base / "data" / "val"
-    cfg["test_dir"] = base / "data" / "test"
 
     with open(base / "cfg.json", "w") as f:
         json.dump({k: str(v) for k,v in cfg.items()}, f, indent=4)
